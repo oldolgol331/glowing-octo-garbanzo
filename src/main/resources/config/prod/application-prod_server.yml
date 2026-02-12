@@ -35,7 +35,7 @@ spring:
       max-file-size: 1MB
       max-request-size: 10MB
   jackson:
-    property-naming-strategy: LOWER_CAMEL_CASE
+    property-naming-strategy: SNAKE_CASE
   task:
     execution:
       pool:
