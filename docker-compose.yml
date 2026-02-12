@@ -1,0 +1,216 @@
+name: demo-docker
+
+services:
+
+  init-mysql:
+    container_name: "demo-init-mysql"
+    image: "busybox:1.36.1"
+    environment:
+      - "TZ=Asia/Seoul"
+    command: [ "sh", "-c", "chown -R 999:999 /var/lib/mysql /var/log/mysql" ]
+    volumes:
+      - "mysql-data:/var/lib/mysql"
+      - "./docker/mysql/log:/var/log/mysql"
+    user: "root"
+
+  mysql:
+    container_name: "demo-mysql"
+    image: "groonga/mroonga:mysql-8.0.44-15.21"
+    environment:
+      - "TZ=Asia/Seoul"
+      - "MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}"
+      - "MYSQL_USER=${MYSQL_USER}"
+      - "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+    ports:
+      - "${MYSQL_HOST_PORT}:${MYSQL_CONTAINER_PORT}"
+    networks: [ "demo-network" ]
+    volumes:
+      - "mysql-data:/var/lib/mysql"
+      - "./docker/mysql/conf.d:/etc/mysql/conf.d:ro"
+      - "./docker/mysql/log:/var/log/mysql"
+    restart: "unless-stopped"
+    depends_on:
+      init-mysql:
+        condition: "service_completed_successfully"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: "10s"
+      timeout: "5s"
+      retries: "5"
+      start_period: "30s"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  valkey:
+    container_name: "demo-valkey"
+    image: "valkey/valkey:7.2.11-alpine"
+    environment:
+      - "TZ=Asia/Seoul"
+    command: [ "valkey-server", "/usr/local/etc/valkey/valkey.conf", "--requirepass", "${VALKEY_PASSWORD}" ]
+    ports:
+      - "${VALKEY_HOST_PORT}:${VALKEY_CONTAINER_PORT}"
+    networks: [ "demo-network" ]
+    volumes:
+      - "valkey-data:/data"
+      - "./docker/valkey/conf/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro"
+    restart: "unless-stopped"
+    healthcheck:
+      test: [ "CMD-SHELL", "VALKEYCLI_AUTH=${VALKEY_PASSWORD} valkey-cli ping | grep -q PONG" ]
+      interval: "5s"
+      timeout: "3s"
+      retries: "3"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dbgate:
+    container_name: "demo-dbgate"
+    image: "dbgate/dbgate:6.8.2-alpine"
+    environment:
+      - "TZ=Asia/Seoul"
+    ports:
+      - "${DBGATE_HOST_PORT}:${DBGATE_CONTAINER_PORT}"
+    networks: [ "demo-network" ]
+    restart: "unless-stopped"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx-proxy-manager:
+    container_name: "demo-nginx-proxy-manager"
+    image: "jc21/nginx-proxy-manager:2.13.5"
+    environment:
+      - "TZ=Asia/Seoul"
+    ports:
+      - "${NPM_HTTP_HOST_PORT}:${NPM_HTTP_CONTAINER_PORT}"
+      - "${NPM_HTTPS_HOST_PORT}:${NPM_HTTPS_CONTAINER_PORT}"
+      - "${NPM_ADMIN_HOST_PORT}:${NPM_ADMIN_CONTAINER_PORT}"
+    networks: [ "demo-network" ]
+    volumes:
+      - "npm-data:/data"
+      - "npm-letsencrypt:/etc/letsencrypt"
+    restart: "unless-stopped"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  init-postgresql:
+    profiles: [ "dev" ]
+    container_name: "demo-dev-init-postgresql"
+    image: "busybox:1.36.1"
+    environment:
+      - "TZ=Asia/Seoul"
+    command: [ "sh", "-c", "chown -R 999:999 /var/lib/postgresql/data" ]
+    volumes:
+      - "postgresql-data:/var/lib/postgresql/data"
+    user: "root"
+
+  postgresql:
+    profiles: [ "dev" ]
+    container_name: "demo-dev-postgresql"
+    image: "postgres:14.20"
+    environment:
+      - "TZ=Asia/Seoul"
+      - "POSTGRES_USER=${POSTGRES_USER:-sonar}"
+      - "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}"
+      - "POSTGRES_DB=${POSTGRES_DB:-sonar}"
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:${POSTGRES_CONTAINER_PORT:-5432}"
+    networks: [ "demo-network" ]
+    volumes:
+      - "postgresql-data:/var/lib/postgresql/data"
+    restart: "unless-stopped"
+    depends_on:
+      init-postgresql:
+        condition: "service_completed_successfully"
+    healthcheck:
+      test: [ "CMD-SHELL","pg_isready -U ${POSTGRES_USER:-sonar} -d ${POSTGRES_DB:-sonar}" ]
+      interval: "10s"
+      timeout: "5s"
+      retries: "5"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  init-sonarqube:
+    profiles: [ "dev" ]
+    container_name: "demo-dev-init-sonarqube"
+    image: "busybox:1.36.1"
+    environment:
+      - "TZ=Asia/Seoul"
+    command: [ "sh", "-c", "chown -R 1000:1000 /opt/sonarqube/data /opt/sonarqube/extensions /opt/sonarqube/logs" ]
+    volumes:
+      - "sonarqube-data:/opt/sonarqube/data"
+      - "sonarqube-extensions:/opt/sonarqube/extensions"
+      - "./docker/sonarqube/logs:/opt/sonarqube/logs"
+    user: "root"
+
+  sonarqube:
+    profiles: [ "dev" ]
+    container_name: "demo-dev-sonarqube"
+    image: "sonarqube:25.12.0.117093-community"
+    environment:
+      - "TZ=Asia/Seoul"
+      - "SONAR_JDBC_URL=jdbc:postgresql://demo-dev-postgresql:${POSTGRES_CONTAINER_PORT:-5432}/${POSTGRES_DB:-sonar}"
+      - "SONAR_JDBC_USERNAME=${POSTGRES_USER:-sonar}"
+      - "SONAR_JDBC_PASSWORD=${POSTGRES_PASSWORD:-password}"
+      - "SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true"
+    ports:
+      - "${SONARQUBE_HOST_PORT:-9000}:${SONARQUBE_CONTAINER_PORT:-9000}"
+    networks: [ "demo-network" ]
+    volumes:
+      - "sonarqube-data:/opt/sonarqube/data"
+      - "sonarqube-extensions:/opt/sonarqube/extensions"
+      - "./docker/sonarqube/logs:/opt/sonarqube/logs"
+    restart: "unless-stopped"
+    depends_on:
+      postgresql:
+        condition: "service_healthy"
+      init-sonarqube:
+        condition: "service_completed_successfully"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${SONARQUBE_CONTAINER_PORT:-9000}/api/system/status" ]
+      interval: "30s"
+      timeout: "10s"
+      retries: "3"
+      start_period: "90s"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  demo-network:
+    driver: "bridge"
+
+volumes:
+  mysql-data:
+    driver: "local"
+  valkey-data:
+    driver: "local"
+  npm-data:
+    driver: "local"
+  npm-letsencrypt:
+    driver: "local"
+  postgresql-data:
+    driver: "local"
+  sonarqube-data:
+    driver: "local"
+  sonarqube-extensions:
+    driver: "local"
