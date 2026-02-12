@@ -1,0 +1,71 @@
+name: Docker
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/Dockerfile'
+      - '**/docker-compose.yml'
+      - '**/docker-compose.override.yml'
+    branches:
+      - main
+  pull_request:
+    paths:
+      - '**/Dockerfile'
+      - '**/docker-compose.yml'
+      - '**/docker-compose.override.yml'
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  EXTERNAL_IMAGES: ""
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull & Cache External Images
+        if: env.EXTERNAL_IMAGES != ''
+        run: |
+          for img in $EXTERNAL_IMAGES; do
+            docker pull $img
+          done
+
+      - name: Build Local Dockerfiles
+        run: |
+          find . -name "Dockerfile" -not -path "*/.*" | while read dockerfile; do
+            dir=$(dirname "$dockerfile")
+            module_name=$(basename "$dir")
+
+            image_tag="${{ github.repository }}/$module_name:latest"
+            image_tag=$(echo "$image_tag" | tr '[:upper:]' '[:lower:]')
+
+            docker buildx build \
+              --tag "$image_tag" \
+              --file "$dockerfile" \
+              --cache-from type=gha,scope=$module_name \
+              --cache-to type=gha,mode=max,scope=$module_name \
+              --load \
+              "$dir"
+          done
+
+      - name: Start Containers with Compose
+        run: |
+          find . -name "docker-compose.yml" -not -path "*/.*" | while read compose_file; do
+            dir=$(dirname "$compose_file")
+            (
+              cd "$dir"
+              docker compose up -d
+            )
+          done
