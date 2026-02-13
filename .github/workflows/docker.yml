@@ -22,7 +22,7 @@ permissions:
   packages: write
 
 env:
-  EXTERNAL_IMAGES: ""
+  EXTERNAL_IMAGES: "groonga/mroonga:mysql-8.0.44-15.21 valkey/valkey:7.2.11-alpine"
 
 jobs:
   docker:
