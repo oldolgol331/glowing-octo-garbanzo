@@ -37,6 +37,7 @@ dependencies {
 
     // --- [SPRING ECOSYSTEM - CORE & DX] ---
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.aop)
     implementation(libs.spring.boot.starter.cache)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.web)
