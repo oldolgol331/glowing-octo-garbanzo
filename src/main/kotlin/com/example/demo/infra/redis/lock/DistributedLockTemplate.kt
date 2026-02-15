@@ -99,7 +99,7 @@ class DistributedLockTemplate(
     private fun validateLockName(lockName: String) {
         if (lockName.isBlank()) throw IllegalArgumentException("Lock name cannot be blank")
 
-        if (!lockName.matches(Regex("^[a-zA-Z0-9\\-_\\.]+$"))) {
+        if (!lockName.matches(Regex("^[a-zA-Z0-9\\-_.:]+$"))) {
             log.warn { "Invalid lock name detected: $lockName" }
             throw IllegalArgumentException("Invalid lock name: $lockName")
         }
