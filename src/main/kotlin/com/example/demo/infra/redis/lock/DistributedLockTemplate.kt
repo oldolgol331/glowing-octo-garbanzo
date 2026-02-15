@@ -5,8 +5,11 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.redisson.api.RLock
 import org.redisson.api.RedissonClient
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW
 import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.reflect.KClass
@@ -25,13 +28,14 @@ import kotlin.reflect.full.primaryConstructor
  */
 @Component
 class DistributedLockTemplate(
-    private val redissonClient: RedissonClient
+    private val redissonClient: RedissonClient,
+    private val transactionManager: PlatformTransactionManager
 ) {
 
     private val log = KotlinLogging.logger {}
 
     /**
-     * 락을 사용하여 블록 실행한다.
+     * 락을 사용하여 블록을 실행한다.
      *
      * @param lockName       락의 이름
      * @param lockType       락의 타입 (REENTRANT, FAIR, READ, WRITE)
@@ -85,6 +89,63 @@ class DistributedLockTemplate(
                     log.warn { "Attempted to unlock a lock that is not held by current thread - Key: $lockName, isLocked: ${rLock.isLocked}, isHeldByCurrentThread: ${rLock.isHeldByCurrentThread}" }
             } catch (e: Exception) {
                 log.error(e) { "Redisson lock was already released - Key: $lockName" }
+            }
+        }
+    }
+
+    /**
+     * 락을 사용하여 트랜잭션이 포함된 블록을 실행한다.
+     *
+     * @param lockName       락의 이름
+     * @param lockType       락의 타입 (REENTRANT, FAIR, READ, WRITE)
+     * @param waitTime       락 잠금 시간
+     * @param leaseTime      락 유지 시간 (-1이면 무제한)
+     * @param timeUnit       시간 단위
+     * @param exceptionClass 락 획득 실패 시 발생할 예외 클래스
+     * @param block          실행할 블록
+     * @return               블록 실행 결과
+     */
+    fun <T> executeWithTransaction(
+        lockName: String,
+        lockType: LockType = REENTRANT,
+        waitTime: Long = 3L,
+        leaseTime: Long = -1L,
+        timeUnit: TimeUnit = SECONDS,
+        exceptionClass: KClass<out RuntimeException> = LockAcquisitionFailedException::class,
+        block: () -> T
+    ): T {
+        validateLockName(lockName)
+
+        val rLock = getLockByType(lockName, lockType)
+        var lockAcquired = false
+
+        try {
+            lockAcquired = if (leaseTime == -1L) rLock.tryLock(waitTime, timeUnit)
+            else rLock.tryLock(waitTime, leaseTime, timeUnit)
+
+            if (!lockAcquired) {
+                log.warn { "Failed to acquire redisson lock - Key: $lockName, Type: $lockType" }
+                throw createException(exceptionClass, "Lock not available: $lockName")
+            }
+
+            log.debug { "Successfully acquired redisson lock - Key: $lockName, Type: $lockType" }
+
+            val transactionTemplate = TransactionTemplate(transactionManager).apply {
+                propagationBehavior = PROPAGATION_REQUIRES_NEW
+                timeout = (leaseTime - 1).toInt()
+            }
+
+            return transactionTemplate.execute { status ->
+                log.debug { "Started transaction - Key: $lockName" }
+                block()
+            }
+        } catch (e: Exception) {
+            log.error(e) { "Transaction failed, rollback - Key: $lockName" }
+            throw e
+        } finally {
+            if (rLock.isLocked && rLock.isHeldByCurrentThread) {
+                rLock.unlock()
+                log.debug { "Released redisson lock - Key: $lockName" }
             }
         }
     }

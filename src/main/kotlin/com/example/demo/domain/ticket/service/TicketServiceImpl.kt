@@ -61,9 +61,8 @@ class TicketServiceImpl(
      * @param concertId 콘서트 ID
      * @return          티켓 유저 ID
      */
-    @Transactional
     override fun issueTicket_lockTemplate(concertId: Long): TicketResponse =
-        distributedLockTemplate.execute(
+        distributedLockTemplate.executeWithTransaction(
             lockName = "concert:$concertId",
             waitTime = 0L,
             leaseTime = 3L
