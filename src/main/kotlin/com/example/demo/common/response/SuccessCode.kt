@@ -21,5 +21,8 @@ enum class SuccessCode(
     REQUEST_SUCCESS(HttpStatus.OK, "요청이 성공적으로 처리되었습니다."),
     CREATE_SUCCESS(HttpStatus.CREATED, "성공적으로 생성되었습니다."),
     UPDATE_SUCCESS(HttpStatus.OK, "성공적으로 업데이트되었습니다."),
-    DELETE_SUCCESS(HttpStatus.OK, "성공적으로 삭제되었습니다.")
+    DELETE_SUCCESS(HttpStatus.OK, "성공적으로 삭제되었습니다."),
+
+    // 티켓(Ticket)
+    TICKET_ISSUED(HttpStatus.CREATED, "티켓이 등록되었습니다.")
 }

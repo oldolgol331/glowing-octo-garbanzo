@@ -34,5 +34,14 @@ enum class ErrorCode(
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "CO013", "요청하신 리소스를 찾을 수 없습니다."),
     MISSING_INPUT_VALUE(HttpStatus.BAD_REQUEST, "CO014", "필수 입력값이 누락되었습니다."),
     INVALID_CLIENT_IP(HttpStatus.BAD_REQUEST, "CO015", "유효하지 않은 클라이언트 IP입니다."),
-    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CO999", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요.")
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CO999", "서버 내부 오류가 발생했습니다. 관리자에게 문의하세요."),
+
+    // 콘서트(Concert)
+    CONCERT_NOT_FOUND(HttpStatus.NOT_FOUND, "CC001", "해당 콘서트를 찾을 수 없습니다."),
+    CONCERT_NAME_DUPLICATED(HttpStatus.CONFLICT, "CC002", "이미 존재하는 콘서트 이름입니다."),
+
+    // 티켓(Ticket)
+    TICKET_NOT_FOUND(HttpStatus.NOT_FOUND, "TK001", "해당 티켓을 찾을 수 없습니다."),
+    TICKET_ALREADY_RESERVED(HttpStatus.CONFLICT, "TK002", "이미 예약된 티켓입니다."),
+    TICKET_MAX_RESERVED(HttpStatus.CONFLICT, "TK003", "최대 예약 갯수에 도달했습니다.")
 }
