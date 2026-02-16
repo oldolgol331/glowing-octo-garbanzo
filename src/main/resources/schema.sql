@@ -9,6 +9,7 @@ CREATE TABLE `concerts`
     `name`       VARCHAR(255) NOT NULL UNIQUE,
     `date`       DATETIME     NOT NULL,
     `max_seats`  INT          NOT NULL,
+    `status`     VARCHAR(20)  NOT NULL DEFAULT 'READY',
     `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CHECK (`max_seats` > 0)

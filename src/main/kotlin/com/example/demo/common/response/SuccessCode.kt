@@ -24,5 +24,6 @@ enum class SuccessCode(
     DELETE_SUCCESS(HttpStatus.OK, "성공적으로 삭제되었습니다."),
 
     // 티켓(Ticket)
+    TICKET_QUEUED(HttpStatus.OK, "티켓 대기열에 등록되었습니다."),
     TICKET_ISSUED(HttpStatus.CREATED, "티켓이 등록되었습니다.")
 }

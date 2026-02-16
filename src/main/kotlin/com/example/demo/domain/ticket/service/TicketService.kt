@@ -1,6 +1,8 @@
 package com.example.demo.domain.ticket.service
 
+import com.example.demo.domain.ticket.dto.TicketQueueResponse
 import com.example.demo.domain.ticket.dto.TicketResponse
+import java.util.*
 
 /**
  * PackageName : com.example.demo.domain.ticket.service
@@ -17,5 +19,7 @@ interface TicketService {
 
     fun issueTicket_lockAop(concertId: Long): TicketResponse
     fun issueTicket_lockTemplate(concertId: Long): TicketResponse
+    fun registerQueue(concertId: Long): TicketQueueResponse
+    fun issueTicket(concertId: Long, userId: UUID): TicketResponse
 
 }

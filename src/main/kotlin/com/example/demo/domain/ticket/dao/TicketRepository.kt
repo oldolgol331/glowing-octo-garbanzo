@@ -20,5 +20,6 @@ interface TicketRepository : JpaRepository<Ticket, Long> {
 
     fun findByConcertAndUserId(concert: Concert, userId: UUID): Ticket?
     fun findByConcert_IdAndUserId(concertId: Long, userId: UUID): Ticket?
+    fun countByConcertId(concertId: Long): Long
 
 }

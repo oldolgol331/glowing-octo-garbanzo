@@ -1,9 +1,11 @@
 package com.example.demo.domain.concert.model
 
 import com.example.demo.common.model.BaseAuditingEntity
+import com.example.demo.domain.concert.model.ConcertStatus.READY
 import com.example.demo.domain.ticket.model.Ticket
 import jakarta.persistence.*
 import jakarta.persistence.CascadeType.REMOVE
+import jakarta.persistence.EnumType.STRING
 import jakarta.persistence.GenerationType.IDENTITY
 import jakarta.validation.constraints.Min
 import java.time.LocalDateTime
@@ -24,7 +26,8 @@ import java.time.LocalDateTime
 class Concert(
     @Column(name = "name", nullable = false, unique = true) var name: String,
     @Column(name = "date", nullable = false) var date: LocalDateTime,
-    @Column(name = "max_seats", nullable = false) @Min(1) var maxSeats: Int
+    @Column(name = "max_seats", nullable = false) @Min(1) var maxSeats: Int,
+    @Enumerated(STRING) @Column(name = "status", nullable = false) var status: ConcertStatus = READY
 ) : BaseAuditingEntity() {
 
     @Id

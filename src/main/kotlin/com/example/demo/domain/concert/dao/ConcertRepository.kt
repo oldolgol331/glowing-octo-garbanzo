@@ -1,6 +1,7 @@
 package com.example.demo.domain.concert.dao
 
 import com.example.demo.domain.concert.model.Concert
+import com.example.demo.domain.concert.model.ConcertStatus
 import org.springframework.data.jpa.repository.JpaRepository
 
 /**
@@ -17,5 +18,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface ConcertRepository : JpaRepository<Concert, Long> {
 
     fun findByName(name: String): Concert?
+    fun findByStatus(status: ConcertStatus): List<Concert>
 
 }
